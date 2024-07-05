@@ -1,10 +1,12 @@
 import path from "path";
 import * as grpc from "@grpc/grpc-js";
-import { GrpcObject, ServiceClientConstructor } from "@grpc/grpc-js";
+import { GrpcObject, ServiceClientConstructor } from "@grpc/grpc-js";     // Not using
 import * as protoLoader from "@grpc/proto-loader"
+import { ProtoGrpcType } from "./generated/a";
+import { Status } from "@grpc/grpc-js/build/src/constants";
 
 const packageDefinition = protoLoader.loadSync(path.join(__dirname, '../src/a.proto'));
-const personProto = grpc.loadPackageDefinition(packageDefinition);
+const personProto = grpc.loadPackageDefinition(packageDefinition) as unknown as ProtoGrpcType;
 
 
 const PERSONS : any[] = [
@@ -27,14 +29,21 @@ function addPerson(call, callback) {   //call => req and callback => res.json
 //@ts-ignore
 function getPersonByName(call , callback){
     const name = call.request.name;
-    const person = PERSONS.find(x => x.name === name);
-    callback(null , person);
+    let person = PERSONS.find(x => x.name === name);
+    if(person){
+        callback(null , person);
+    } else{
+        callback({
+            code: Status.NOT_FOUND,
+            details: "not found"
+        }, null);
+    }
 }
   
   
 const server = new grpc.Server();
 
-server.addService((personProto.AddressBookService as ServiceClientConstructor).service, { 
+server.addService((personProto.AddressBookService).service, { 
     addPerson: addPerson , 
     getPersonByName: getPersonByName 
 });
