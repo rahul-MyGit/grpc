@@ -4,6 +4,7 @@ import { GrpcObject, ServiceClientConstructor } from "@grpc/grpc-js";     // Not
 import * as protoLoader from "@grpc/proto-loader"
 import { ProtoGrpcType } from "./generated/a";
 import { Status } from "@grpc/grpc-js/build/src/constants";
+import { AddressBookServiceHandlers } from "./generated/AddressBookService";
 
 const packageDefinition = protoLoader.loadSync(path.join(__dirname, '../src/a.proto'));
 const personProto = grpc.loadPackageDefinition(packageDefinition) as unknown as ProtoGrpcType;
@@ -16,37 +17,60 @@ const PERSONS : any[] = [
 ];
 
 
-//@ts-ignore
-function addPerson(call, callback) {   //call => req and callback => res.json
+
+// function addPerson(call, callback) {   //call => req and callback => res.json
+//       let person = {
+//         name: call.request.name,
+//         age: call.request.age
+//       }
+//       PERSONS.push(person);
+//       callback(null, person)       // first arg is Error
+// }
+
+
+// function getPersonByName(call , callback){
+//     const name = call.request.name;
+//     let person = PERSONS.find(x => x.name === name);
+//     if(person){
+//         callback(null , person);
+//     } else{
+//         callback({
+//             code: Status.NOT_FOUND,
+//             details: "not found"
+//         }, null);
+//     }
+// }
+  
+const handler: AddressBookServiceHandlers =  {
+    AddPerson: (call, callback) => {
       let person = {
         name: call.request.name,
         age: call.request.age
       }
       PERSONS.push(person);
-      callback(null, person)       // first arg is Error
-}
-
-//@ts-ignore
-function getPersonByName(call , callback){
-    const name = call.request.name;
-    let person = PERSONS.find(x => x.name === name);
-    if(person){
-        callback(null , person);
-    } else{
+      callback(null, person)
+    },
+    GetPersonByName: (call, callback) => {
+      let person = PERSONS.find(x => x.name === call.request.name);
+      if (person) {
+        callback(null, person)
+      } else {
         callback({
-            code: Status.NOT_FOUND,
-            details: "not found"
+          code: Status.NOT_FOUND,
+          details: "not found"
         }, null);
+      }
     }
-}
-  
+  }
   
 const server = new grpc.Server();
 
-server.addService((personProto.AddressBookService).service, { 
-    addPerson: addPerson , 
-    getPersonByName: getPersonByName 
-});
+// server.addService((personProto.AddressBookService).service, { 
+//     addPerson: addPerson , 
+//     getPersonByName: getPersonByName 
+// });
+
+server.addService((personProto.AddressBookService).service, handler);
 
 server.bindAsync('0.0.0.0:50051', grpc.ServerCredentials.createInsecure(), () => {
     server.start();
